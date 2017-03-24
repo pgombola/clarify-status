@@ -69,6 +69,7 @@ func main() {
 		err := client.Deregister(reg)
 		if err != nil {
 			errc <- err
+			return
 		}
 		errc <- &exitSignal{sig: sig.String()}
 	}()
