@@ -17,6 +17,7 @@ const StatusStopped = 0
 const StatusPending = 1
 const StatusStarted = 2
 const StatusMixed = 3
+const StatusUnallocated = 4
 
 // HostStatus is a read model for the status of a Host.
 type HostStatus struct {
@@ -76,6 +77,8 @@ func status(host *client.Host, clarify *client.Job, alloc *client.Alloc) int {
 		status = StatusPending
 	} else if alloc.ClientStatus == "running" && !alloc.CheckTaskStates("running") {
 		status = StatusMixed
+	} else if alloc.ClientStatus == "complete" {
+		status = StatusUnallocated
 	} else {
 		status = StatusStarted
 	}

@@ -64,6 +64,8 @@ func statusToPb(status int) pb.HostStatusReply_Host_HostStatus {
 		return pb.HostStatusReply_Host_STARTED
 	case StatusStopped:
 		return pb.HostStatusReply_Host_STOPPED
+	case StatusUnallocated:
+		return pb.HostStatusReply_Host_UNALLOCATED
 	}
 	return -1
 }

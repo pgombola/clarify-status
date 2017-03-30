@@ -20,6 +20,7 @@ message HostStatusReply {
       PENDING = 1;
       MIXED = 2;
       STARTED = 3;
+      UNALLOCATED = 4;
     }
     HostStatus status = 2;
   }
