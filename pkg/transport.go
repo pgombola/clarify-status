@@ -30,7 +30,8 @@ func MakeGRPCServer(endpoints Endpoints, tracer stdopentracing.Tracer, logger lo
 }
 
 func DecodeGRPCGetAllHostStatusRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
-	return &statusRequest{}, nil
+	statusReq := grpcReq.(pb.HostStatusRequest)
+	return &statusRequest{JobName: statusReq.JobName}, nil
 }
 
 func EncodeGRPCGetAllHostStatusResponse(_ context.Context, response interface{}) (interface{}, error) {

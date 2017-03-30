@@ -22,7 +22,9 @@ func (e Endpoints) GetHostStatus(ctx context.Context) ([]*HostStatus, error) {
 	return response.(statusResponse).Status, response.(statusResponse).Err
 }
 
-type statusRequest struct{}
+type statusRequest struct {
+	JobName *string
+}
 
 type statusResponse struct {
 	Status []*HostStatus
@@ -33,7 +35,8 @@ func (r statusResponse) error() error { return r.Err }
 
 func MakeGetHostStatusEndpoint(status Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		s, err := status.GetHostStatus(ctx)
+		statusReq := request.(statusRequest)
+		s, err := status.GetHostStatus(ctx, statusReq.JobName)
 		return statusResponse{Status: s, Err: err}, nil
 	}
 }
