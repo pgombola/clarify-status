@@ -38,9 +38,9 @@ func EncodeGRPCGetAllHostStatusResponse(_ context.Context, response interface{})
 	if resp.Err != nil {
 		return &pb.HostStatusReply{Error: resp.Err.Error()}, nil
 	}
-	replyHosts := make([]*pb.HostStatusReply_Host, len(*resp.Status))
-	for _, s := range *resp.Status {
-		host := &pb.HostStatusReply_Host{Hostname: s.Host.Name}
+	replyHosts := make([]*pb.HostStatusReply_Host, 0)
+	for _, s := range resp.Status {
+		host := &pb.HostStatusReply_Host{Hostname: s.Host.Name, Status: statusToPb(s.Status)}
 		replyHosts = append(replyHosts, host)
 	}
 	return &pb.HostStatusReply{Hosts: replyHosts, Error: ""}, nil
@@ -52,4 +52,18 @@ func (s *grpcServer) GetHostStatus(ctx oldcontext.Context, req *pb.HostStatusReq
 		return nil, err
 	}
 	return rep.(*pb.HostStatusReply), nil
+}
+
+func statusToPb(status int) pb.HostStatusReply_Host_HostStatus {
+	switch status {
+	case StatusMixed:
+		return pb.HostStatusReply_Host_MIXED
+	case StatusPending:
+		return pb.HostStatusReply_Host_PENDING
+	case StatusStarted:
+		return pb.HostStatusReply_Host_STARTED
+	case StatusStopped:
+		return pb.HostStatusReply_Host_STOPPED
+	}
+	return -1
 }

@@ -12,12 +12,12 @@ type Endpoints struct {
 }
 
 // GetHostStatus implements Service.
-func (e Endpoints) GetHostStatus(ctx context.Context) (*[]HostStatus, error) {
+func (e Endpoints) GetHostStatus(ctx context.Context) ([]*HostStatus, error) {
 	request := statusRequest{}
 	response, err := e.StatusEndpoint(ctx, request)
 	if err != nil {
-		empty := make([]HostStatus, 0)
-		return &empty, err
+		empty := make([]*HostStatus, 0)
+		return empty, err
 	}
 	return response.(statusResponse).Status, response.(statusResponse).Err
 }
@@ -25,7 +25,7 @@ func (e Endpoints) GetHostStatus(ctx context.Context) (*[]HostStatus, error) {
 type statusRequest struct{}
 
 type statusResponse struct {
-	Status *[]HostStatus
+	Status []*HostStatus
 	Err    error
 }
 
