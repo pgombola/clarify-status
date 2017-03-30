@@ -2,10 +2,13 @@ package clarifystatussvc
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"strconv"
 
-	"github.com/go-kit/kit/sd"
+	"github.com/go-kit/kit/log"
+
+	"github.com/go-kit/kit/sd/lb"
 	"github.com/pgombola/gomad/client"
 )
 
@@ -28,32 +31,41 @@ type Service interface {
 }
 
 type statusService struct {
-	Nomad *client.NomadServer
+	Nomad  lb.Balancer
+	Logger log.Logger
 }
 
 // NewClarifyStatusService returns a new instance of the service.
-func NewClarifyStatusService(nomads sd.Subscriber) Service {
-	eps, _ := nomads.Endpoints()
-	ep, _ := eps[0](nil, nil)
-	host, portString, _ := net.SplitHostPort(ep.(string))
-	port, _ := strconv.Atoi(portString)
-	nomadServer := &client.NomadServer{Address: host, Port: port}
-	return &statusService{Nomad: nomadServer}
+func NewClarifyStatusService(nomad lb.Balancer, logger log.Logger) Service {
+	return &statusService{Nomad: nomad, Logger: logger}
 }
 
 func (s *statusService) GetHostStatus(_ context.Context) ([]*HostStatus, error) {
-	hosts, _, _ := client.Hosts(s.Nomad)
-	clarifyJob, _ := client.FindJob(s.Nomad, "clarify")
+	nomad := s.getNomadServer()
+	hosts, _, _ := client.Hosts(nomad)
+	clarifyJob, _ := client.FindJob(nomad, "clarify")
 	hostStatus := make([]*HostStatus, len(hosts))
 
 	for i, host := range hosts {
-		alloc, err := client.FindAlloc(s.Nomad, clarifyJob, &host)
+		alloc, err := client.FindAlloc(nomad, clarifyJob, &host)
 		if err != nil {
 			// TODO clarify not allocated here
 		}
 		hostStatus[i] = &HostStatus{Host: host, Status: status(&host, clarifyJob, alloc)}
 	}
 	return hostStatus, nil
+}
+
+func (s *statusService) getNomadServer() *client.NomadServer {
+	endpoint, err := s.Nomad.Endpoint()
+	if err != nil {
+		s.Logger.Log("err", "Unable to locate nomad server.")
+	}
+	ep, _ := endpoint(nil, nil)
+	host, portString, _ := net.SplitHostPort(ep.(string))
+	port, _ := strconv.Atoi(portString)
+	s.Logger.Log("info", fmt.Sprintf("Discovered nomad server @ %v:%v", host, port))
+	return &client.NomadServer{Address: host, Port: port}
 }
 
 func status(host *client.Host, clarify *client.Job, alloc *client.Alloc) int {

@@ -16,8 +16,8 @@ import (
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/sd"
 	consulsd "github.com/go-kit/kit/sd/consul"
+	"github.com/go-kit/kit/sd/lb"
 	"github.com/hashicorp/consul/api"
 	"github.com/pgombola/clarify-status/pkg"
 	"github.com/pgombola/clarify-status/pkg/pb"
@@ -41,11 +41,16 @@ func main() {
 		logger = log.With(logger, "caller", log.DefaultCaller)
 	}
 
+	svc := &service{
+		HTTPAddress: httpAddr,
+		GRPCAddress: grpcAddr,
+		Name:        serviceName,
+		Instance:    *instance}
+
 	// Registry domain.
 	var (
-		client          consulsd.Client
-		reg             *api.AgentServiceRegistration
-		nomadSubscriber sd.Subscriber
+		client consulsd.Client
+		reg    *api.AgentServiceRegistration
 	)
 	{
 		var err error
@@ -53,14 +58,20 @@ func main() {
 		if err != nil {
 			logger.Log("err", err)
 		}
-		reg, err = registerService(client, httpAddr, grpcAddr, *serviceName, instance)
+		reg, err = registerService(client, svc)
 		if err != nil {
 			logger.Log("err", err)
 		}
-		nomadSubscriber = consulsd.NewSubscriber(client, nomadAddressFactory, logger, "nomad", []string{"http"}, true)
 	}
 
-	//Discovery doman.
+	// Discovery domain.
+	var (
+		balancer lb.Balancer
+	)
+	{
+		nomadSubscriber := consulsd.NewSubscriber(client, nomadAddressFactory, logger, "nomad", []string{"http"}, true)
+		balancer = lb.NewRoundRobin(nomadSubscriber)
+	}
 
 	// Mechanical domain.
 	// Error handling channel.
@@ -72,7 +83,7 @@ func main() {
 	// Business domain.
 	var service clarifystatussvc.Service
 	{
-		service = clarifystatussvc.NewClarifyStatusService(nomadSubscriber)
+		service = clarifystatussvc.NewClarifyStatusService(balancer, logger)
 	}
 
 	// Endpoint domain.
@@ -82,8 +93,8 @@ func main() {
 	}
 	endpoints := clarifystatussvc.Endpoints{StatusEndpoint: statusEp}
 
-	startHealth(errc, logger, httpAddr)
-	startGRPC(errc, logger, grpcAddr, endpoints)
+	startHealth(errc, logger, svc)
+	startGRPC(errc, logger, svc, endpoints)
 
 	for {
 		select {
@@ -92,11 +103,18 @@ func main() {
 				logger.Log(err)
 			}
 		case s := <-sigs:
-			logger.Log("err", fmt.Sprintf("Captured %v. Exiting...", s))
+			logger.Log("error", fmt.Sprintf("Captured %v. Exiting...", s))
 			client.Deregister(reg)
 			os.Exit(0)
 		}
 	}
+}
+
+type service struct {
+	GRPCAddress *string
+	HTTPAddress *string
+	Instance    int
+	Name        *string
 }
 
 func createConsulClient(consulAddr *string, logger log.Logger) (consulsd.Client, error) {
@@ -108,40 +126,40 @@ func createConsulClient(consulAddr *string, logger log.Logger) (consulsd.Client,
 	return consulsd.NewClient(consulClient), err
 }
 
-func registerService(client consulsd.Client, httpAddr *string, grpcAddr *string, serviceName string, instance *int) (*api.AgentServiceRegistration, error) {
+func registerService(client consulsd.Client, svc *service) (*api.AgentServiceRegistration, error) {
 	check := &api.AgentServiceCheck{
-		HTTP:     fmt.Sprintf("http://%v/health", *httpAddr),
+		HTTP:     fmt.Sprintf("http://%v/health", *svc.HTTPAddress),
 		Interval: "10s",
-		Timeout:  "1s",
+		Timeout:  "3s",
 	}
-	host, strPort, _ := net.SplitHostPort(*grpcAddr)
+	host, strPort, _ := net.SplitHostPort(*svc.GRPCAddress)
 	port, _ := strconv.Atoi(strPort)
 	reg := &api.AgentServiceRegistration{
-		Name:    serviceName,
+		Name:    *svc.Name,
 		Address: host,
 		Port:    port,
-		ID:      serviceName + "-" + strconv.Itoa(*instance),
-		Tags:    []string{"urlprefix-/status"},
+		ID:      *svc.Name + "-" + strconv.Itoa(svc.Instance),
+		Tags:    []string{"grpc"},
 		Check:   check,
 	}
 	err := client.Register(reg)
 	return reg, err
 }
 
-func startHealth(errc chan error, logger log.Logger, httpAddr *string) {
+func startHealth(errc chan error, logger log.Logger, svc *service) {
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(w, "OK")
 	})
-	logger.Log("info", fmt.Sprintf("Starting /health at %v", *httpAddr))
+	logger.Log("info", fmt.Sprintf("Starting /health at %v", *svc.HTTPAddress))
 	go func() {
-		errc <- http.ListenAndServe(*httpAddr, nil)
+		errc <- http.ListenAndServe(*svc.HTTPAddress, nil)
 	}()
 }
 
-func startGRPC(errc chan error, logger log.Logger, grpcAddr *string, endpoints clarifystatussvc.Endpoints) {
+func startGRPC(errc chan error, logger log.Logger, svc *service, endpoints clarifystatussvc.Endpoints) {
 	go func() {
-		logger.Log("info", fmt.Sprintf("Starting gRPC at %v", *grpcAddr))
-		ln, err := net.Listen("tcp", *grpcAddr)
+		logger.Log("info", fmt.Sprintf("Starting gRPC at %v", *svc.GRPCAddress))
+		ln, err := net.Listen("tcp", *svc.GRPCAddress)
 		if err != nil {
 			errc <- err
 			return
@@ -157,12 +175,4 @@ func nomadAddressFactory(instance string) (endpoint.Endpoint, io.Closer, error) 
 	return func(context.Context, interface{}) (interface{}, error) {
 		return instance, nil
 	}, nil, nil
-}
-
-type exitSignal struct {
-	sig string
-}
-
-func (e *exitSignal) Error() string {
-	return fmt.Sprintf("Received %v", e.sig)
 }
