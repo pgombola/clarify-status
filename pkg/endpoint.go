@@ -35,7 +35,7 @@ func (r statusResponse) error() error { return r.Err }
 
 func MakeGetHostStatusEndpoint(status Service) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
-		statusReq := request.(statusRequest)
+		statusReq := request.(*statusRequest)
 		s, err := status.GetHostStatus(ctx, statusReq.JobName)
 		return statusResponse{Status: s, Err: err}, nil
 	}

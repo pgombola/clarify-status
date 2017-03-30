@@ -13,6 +13,8 @@ import (
 	"syscall"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/health"
+	"google.golang.org/grpc/health/grpc_health_v1"
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/log"
@@ -148,7 +150,20 @@ func registerService(client consulsd.Client, svc *service) (*api.AgentServiceReg
 
 func startHealth(errc chan error, logger log.Logger, svc *service) {
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(w, "OK")
+		conn, err := grpc.Dial(*svc.GRPCAddress, grpc.WithInsecure())
+		if err != nil {
+			errc <- err
+		}
+		defer conn.Close()
+		client := grpc_health_v1.NewHealthClient(conn)
+		health, err := client.Check(context.Background(), &grpc_health_v1.HealthCheckRequest{Service: *svc.Name})
+		if err != nil {
+			errc <- err
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(health.String()))
 	})
 	logger.Log("info", fmt.Sprintf("Starting /health at %v", *svc.HTTPAddress))
 	go func() {
@@ -165,8 +180,11 @@ func startGRPC(errc chan error, logger log.Logger, svc *service, endpoints clari
 			return
 		}
 		srv := clarifystatussvc.MakeGRPCServer(endpoints, nil, nil)
+		healthSrv := health.NewServer()
 		s := grpc.NewServer()
+		grpc_health_v1.RegisterHealthServer(s, healthSrv)
 		pb.RegisterClarifyStatusServer(s, srv)
+		healthSrv.SetServingStatus(*svc.Name, grpc_health_v1.HealthCheckResponse_SERVING)
 		errc <- s.Serve(ln)
 	}()
 }
