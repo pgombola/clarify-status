@@ -71,7 +71,7 @@ func (s *statusService) getNomadServer() *client.NomadServer {
 	ep, _ := endpoint(nil, nil)
 	host, portString, _ := net.SplitHostPort(ep.(string))
 	port, _ := strconv.Atoi(portString)
-	s.Logger.Log("info", fmt.Sprintf("Discovered nomad server @ %v:%v", host, port))
+	s.Logger.Log("info", fmt.Sprintf("Discovered [nomad]@%v:%v", host, port))
 	return &client.NomadServer{Address: host, Port: port}
 }
 
