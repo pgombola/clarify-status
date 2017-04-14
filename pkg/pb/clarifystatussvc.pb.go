@@ -9,6 +9,8 @@ It is generated from these files:
 	clarifystatussvc.proto
 
 It has these top-level messages:
+	ServiceLocationRequest
+	ServiceLocationReply
 	HostStatusRequest
 	HostStatusReply
 */
@@ -63,7 +65,81 @@ func (x HostStatusReply_Host_HostStatus) String() string {
 	return proto.EnumName(HostStatusReply_Host_HostStatus_name, int32(x))
 }
 func (HostStatusReply_Host_HostStatus) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor0, []int{1, 0, 0}
+	return fileDescriptor0, []int{3, 0, 0}
+}
+
+type ServiceLocationRequest struct {
+	ServiceName string `protobuf:"bytes,1,opt,name=serviceName" json:"serviceName,omitempty"`
+	ServiceTag  string `protobuf:"bytes,2,opt,name=serviceTag" json:"serviceTag,omitempty"`
+	Healthy     bool   `protobuf:"varint,3,opt,name=healthy" json:"healthy,omitempty"`
+}
+
+func (m *ServiceLocationRequest) Reset()                    { *m = ServiceLocationRequest{} }
+func (m *ServiceLocationRequest) String() string            { return proto.CompactTextString(m) }
+func (*ServiceLocationRequest) ProtoMessage()               {}
+func (*ServiceLocationRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
+
+func (m *ServiceLocationRequest) GetServiceName() string {
+	if m != nil {
+		return m.ServiceName
+	}
+	return ""
+}
+
+func (m *ServiceLocationRequest) GetServiceTag() string {
+	if m != nil {
+		return m.ServiceTag
+	}
+	return ""
+}
+
+func (m *ServiceLocationRequest) GetHealthy() bool {
+	if m != nil {
+		return m.Healthy
+	}
+	return false
+}
+
+type ServiceLocationReply struct {
+	Locations []*ServiceLocationReply_ServiceLocation `protobuf:"bytes,1,rep,name=locations" json:"locations,omitempty"`
+}
+
+func (m *ServiceLocationReply) Reset()                    { *m = ServiceLocationReply{} }
+func (m *ServiceLocationReply) String() string            { return proto.CompactTextString(m) }
+func (*ServiceLocationReply) ProtoMessage()               {}
+func (*ServiceLocationReply) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
+
+func (m *ServiceLocationReply) GetLocations() []*ServiceLocationReply_ServiceLocation {
+	if m != nil {
+		return m.Locations
+	}
+	return nil
+}
+
+type ServiceLocationReply_ServiceLocation struct {
+	ServiceHost string `protobuf:"bytes,1,opt,name=serviceHost" json:"serviceHost,omitempty"`
+	ServicePort int64  `protobuf:"varint,2,opt,name=servicePort" json:"servicePort,omitempty"`
+}
+
+func (m *ServiceLocationReply_ServiceLocation) Reset()         { *m = ServiceLocationReply_ServiceLocation{} }
+func (m *ServiceLocationReply_ServiceLocation) String() string { return proto.CompactTextString(m) }
+func (*ServiceLocationReply_ServiceLocation) ProtoMessage()    {}
+func (*ServiceLocationReply_ServiceLocation) Descriptor() ([]byte, []int) {
+	return fileDescriptor0, []int{1, 0}
+}
+
+func (m *ServiceLocationReply_ServiceLocation) GetServiceHost() string {
+	if m != nil {
+		return m.ServiceHost
+	}
+	return ""
+}
+
+func (m *ServiceLocationReply_ServiceLocation) GetServicePort() int64 {
+	if m != nil {
+		return m.ServicePort
+	}
+	return 0
 }
 
 type HostStatusRequest struct {
@@ -73,7 +149,7 @@ type HostStatusRequest struct {
 func (m *HostStatusRequest) Reset()                    { *m = HostStatusRequest{} }
 func (m *HostStatusRequest) String() string            { return proto.CompactTextString(m) }
 func (*HostStatusRequest) ProtoMessage()               {}
-func (*HostStatusRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
+func (*HostStatusRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
 
 func (m *HostStatusRequest) GetJobName() string {
 	if m != nil {
@@ -90,7 +166,7 @@ type HostStatusReply struct {
 func (m *HostStatusReply) Reset()                    { *m = HostStatusReply{} }
 func (m *HostStatusReply) String() string            { return proto.CompactTextString(m) }
 func (*HostStatusReply) ProtoMessage()               {}
-func (*HostStatusReply) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
+func (*HostStatusReply) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{3} }
 
 func (m *HostStatusReply) GetHosts() []*HostStatusReply_Host {
 	if m != nil {
@@ -107,14 +183,16 @@ func (m *HostStatusReply) GetError() string {
 }
 
 type HostStatusReply_Host struct {
-	Hostname string                          `protobuf:"bytes,1,opt,name=hostname" json:"hostname,omitempty"`
-	Status   HostStatusReply_Host_HostStatus `protobuf:"varint,2,opt,name=status,enum=pb.HostStatusReply_Host_HostStatus" json:"status,omitempty"`
+	Hostname          string                          `protobuf:"bytes,1,opt,name=hostname" json:"hostname,omitempty"`
+	Status            HostStatusReply_Host_HostStatus `protobuf:"varint,2,opt,name=status,enum=pb.HostStatusReply_Host_HostStatus" json:"status,omitempty"`
+	CoordinatorLeader bool                            `protobuf:"varint,3,opt,name=coordinatorLeader" json:"coordinatorLeader,omitempty"`
+	ReceiverLeader    bool                            `protobuf:"varint,4,opt,name=receiverLeader" json:"receiverLeader,omitempty"`
 }
 
 func (m *HostStatusReply_Host) Reset()                    { *m = HostStatusReply_Host{} }
 func (m *HostStatusReply_Host) String() string            { return proto.CompactTextString(m) }
 func (*HostStatusReply_Host) ProtoMessage()               {}
-func (*HostStatusReply_Host) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1, 0} }
+func (*HostStatusReply_Host) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{3, 0} }
 
 func (m *HostStatusReply_Host) GetHostname() string {
 	if m != nil {
@@ -130,7 +208,24 @@ func (m *HostStatusReply_Host) GetStatus() HostStatusReply_Host_HostStatus {
 	return HostStatusReply_Host_STOPPED
 }
 
+func (m *HostStatusReply_Host) GetCoordinatorLeader() bool {
+	if m != nil {
+		return m.CoordinatorLeader
+	}
+	return false
+}
+
+func (m *HostStatusReply_Host) GetReceiverLeader() bool {
+	if m != nil {
+		return m.ReceiverLeader
+	}
+	return false
+}
+
 func init() {
+	proto.RegisterType((*ServiceLocationRequest)(nil), "pb.ServiceLocationRequest")
+	proto.RegisterType((*ServiceLocationReply)(nil), "pb.ServiceLocationReply")
+	proto.RegisterType((*ServiceLocationReply_ServiceLocation)(nil), "pb.ServiceLocationReply.ServiceLocation")
 	proto.RegisterType((*HostStatusRequest)(nil), "pb.HostStatusRequest")
 	proto.RegisterType((*HostStatusReply)(nil), "pb.HostStatusReply")
 	proto.RegisterType((*HostStatusReply_Host)(nil), "pb.HostStatusReply.Host")
@@ -145,64 +240,97 @@ var _ grpc.ClientConn
 // is compatible with the grpc package it is being compiled against.
 const _ = grpc.SupportPackageIsVersion4
 
-// Client API for ClarifyStatus service
+// Client API for ClarifyControl service
 
-type ClarifyStatusClient interface {
+type ClarifyControlClient interface {
 	GetHostStatus(ctx context.Context, in *HostStatusRequest, opts ...grpc.CallOption) (*HostStatusReply, error)
+	GetServiceLocation(ctx context.Context, in *ServiceLocationRequest, opts ...grpc.CallOption) (*ServiceLocationReply, error)
 }
 
-type clarifyStatusClient struct {
+type clarifyControlClient struct {
 	cc *grpc.ClientConn
 }
 
-func NewClarifyStatusClient(cc *grpc.ClientConn) ClarifyStatusClient {
-	return &clarifyStatusClient{cc}
+func NewClarifyControlClient(cc *grpc.ClientConn) ClarifyControlClient {
+	return &clarifyControlClient{cc}
 }
 
-func (c *clarifyStatusClient) GetHostStatus(ctx context.Context, in *HostStatusRequest, opts ...grpc.CallOption) (*HostStatusReply, error) {
+func (c *clarifyControlClient) GetHostStatus(ctx context.Context, in *HostStatusRequest, opts ...grpc.CallOption) (*HostStatusReply, error) {
 	out := new(HostStatusReply)
-	err := grpc.Invoke(ctx, "/pb.ClarifyStatus/GetHostStatus", in, out, c.cc, opts...)
+	err := grpc.Invoke(ctx, "/pb.ClarifyControl/GetHostStatus", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// Server API for ClarifyStatus service
+func (c *clarifyControlClient) GetServiceLocation(ctx context.Context, in *ServiceLocationRequest, opts ...grpc.CallOption) (*ServiceLocationReply, error) {
+	out := new(ServiceLocationReply)
+	err := grpc.Invoke(ctx, "/pb.ClarifyControl/GetServiceLocation", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
 
-type ClarifyStatusServer interface {
+// Server API for ClarifyControl service
+
+type ClarifyControlServer interface {
 	GetHostStatus(context.Context, *HostStatusRequest) (*HostStatusReply, error)
+	GetServiceLocation(context.Context, *ServiceLocationRequest) (*ServiceLocationReply, error)
 }
 
-func RegisterClarifyStatusServer(s *grpc.Server, srv ClarifyStatusServer) {
-	s.RegisterService(&_ClarifyStatus_serviceDesc, srv)
+func RegisterClarifyControlServer(s *grpc.Server, srv ClarifyControlServer) {
+	s.RegisterService(&_ClarifyControl_serviceDesc, srv)
 }
 
-func _ClarifyStatus_GetHostStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _ClarifyControl_GetHostStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(HostStatusRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ClarifyStatusServer).GetHostStatus(ctx, in)
+		return srv.(ClarifyControlServer).GetHostStatus(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/pb.ClarifyStatus/GetHostStatus",
+		FullMethod: "/pb.ClarifyControl/GetHostStatus",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ClarifyStatusServer).GetHostStatus(ctx, req.(*HostStatusRequest))
+		return srv.(ClarifyControlServer).GetHostStatus(ctx, req.(*HostStatusRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-var _ClarifyStatus_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "pb.ClarifyStatus",
-	HandlerType: (*ClarifyStatusServer)(nil),
+func _ClarifyControl_GetServiceLocation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ServiceLocationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ClarifyControlServer).GetServiceLocation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/pb.ClarifyControl/GetServiceLocation",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ClarifyControlServer).GetServiceLocation(ctx, req.(*ServiceLocationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+var _ClarifyControl_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "pb.ClarifyControl",
+	HandlerType: (*ClarifyControlServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
 			MethodName: "GetHostStatus",
-			Handler:    _ClarifyStatus_GetHostStatus_Handler,
+			Handler:    _ClarifyControl_GetHostStatus_Handler,
+		},
+		{
+			MethodName: "GetServiceLocation",
+			Handler:    _ClarifyControl_GetServiceLocation_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
@@ -212,25 +340,35 @@ var _ClarifyStatus_serviceDesc = grpc.ServiceDesc{
 func init() { proto.RegisterFile("clarifystatussvc.proto", fileDescriptor0) }
 
 var fileDescriptor0 = []byte{
-	// 313 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x74, 0x91, 0xcb, 0x4e, 0xc2, 0x40,
-	0x14, 0x86, 0x99, 0x72, 0x93, 0x43, 0x90, 0x3a, 0x5e, 0xd2, 0xb0, 0xc2, 0xba, 0x61, 0xe3, 0x2c,
-	0x70, 0x65, 0x8c, 0x0b, 0xa0, 0x0d, 0x92, 0x60, 0xdb, 0x14, 0x4c, 0xdc, 0xb6, 0xcd, 0x18, 0x35,
-	0xc5, 0xa9, 0x33, 0x53, 0x13, 0x5e, 0xc1, 0xa7, 0xf1, 0x11, 0x4d, 0x67, 0xaa, 0x34, 0x44, 0x97,
-	0xff, 0x3f, 0xdf, 0x99, 0x73, 0xf9, 0xe1, 0x2c, 0x49, 0x23, 0xfe, 0xf2, 0xb4, 0x15, 0x32, 0x92,
-	0xb9, 0x10, 0x1f, 0x09, 0xc9, 0x38, 0x93, 0x0c, 0x1b, 0x59, 0x6c, 0x5f, 0xc2, 0xd1, 0x1d, 0x13,
-	0x72, 0xa5, 0x9e, 0x42, 0xfa, 0x9e, 0x53, 0x21, 0xb1, 0x05, 0xed, 0x57, 0x16, 0x7b, 0xd1, 0x86,
-	0x5a, 0x68, 0x88, 0x46, 0x9d, 0xf0, 0x47, 0xda, 0x9f, 0x06, 0xf4, 0xab, 0x7c, 0x96, 0x6e, 0x31,
-	0x81, 0xe6, 0x33, 0x13, 0x52, 0x58, 0x68, 0x58, 0x1f, 0x75, 0xc7, 0x16, 0xc9, 0x62, 0xb2, 0xc7,
-	0x28, 0x1d, 0x6a, 0x0c, 0x9f, 0x40, 0x93, 0x72, 0xce, 0xb8, 0x65, 0xa8, 0xbf, 0xb5, 0x18, 0x7c,
-	0x21, 0x68, 0x14, 0x14, 0x1e, 0xc0, 0x41, 0xc1, 0xbd, 0xed, 0xba, 0xff, 0x6a, 0x7c, 0x03, 0x2d,
-	0xbd, 0x84, 0xaa, 0x3d, 0x1c, 0x5f, 0xfc, 0xd7, 0xab, 0x6a, 0x96, 0x25, 0xb6, 0x0f, 0xb0, 0x73,
-	0x71, 0x17, 0xda, 0xab, 0xb5, 0x1f, 0x04, 0xae, 0x63, 0xd6, 0x0a, 0x11, 0xb8, 0x9e, 0xb3, 0xf0,
-	0xe6, 0x26, 0xc2, 0x1d, 0x68, 0xde, 0x2f, 0x1e, 0x5d, 0xc7, 0x34, 0x34, 0x34, 0x09, 0xd7, 0xae,
-	0x63, 0xd6, 0x71, 0x1f, 0xba, 0x0f, 0xde, 0x64, 0xb9, 0xf4, 0x67, 0x93, 0xc2, 0x68, 0x8c, 0x3d,
-	0xe8, 0xcd, 0xf4, 0x65, 0xcb, 0x3f, 0x6f, 0xa1, 0x37, 0xa7, 0xb2, 0xd2, 0xe4, 0x74, 0x7f, 0x3e,
-	0x75, 0xdf, 0xc1, 0xf1, 0x1f, 0x63, 0xdb, 0xb5, 0xe9, 0x35, 0x9c, 0x27, 0x6c, 0x43, 0x92, 0x94,
-	0x32, 0x52, 0x46, 0x46, 0x92, 0x34, 0x17, 0x92, 0x72, 0xbd, 0x02, 0xc9, 0xe2, 0x29, 0x9e, 0x69,
-	0x47, 0x97, 0x06, 0x45, 0x90, 0x01, 0x8a, 0x5b, 0x2a, 0xd1, 0xab, 0xef, 0x00, 0x00, 0x00, 0xff,
-	0xff, 0x8e, 0x2d, 0xb6, 0x11, 0xeb, 0x01, 0x00, 0x00,
+	// 471 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x74, 0x53, 0xdd, 0x8e, 0xd2, 0x40,
+	0x14, 0xa6, 0x05, 0x96, 0xe5, 0x10, 0x81, 0x9d, 0x5d, 0x37, 0x4d, 0x4d, 0x0c, 0xa9, 0x89, 0xe1,
+	0x42, 0x7b, 0x81, 0xde, 0x19, 0x2f, 0x58, 0x40, 0xdc, 0xa4, 0x42, 0x53, 0xd8, 0xc4, 0xdb, 0x76,
+	0x76, 0x94, 0x9a, 0x6e, 0x4f, 0x9d, 0xce, 0x92, 0xf0, 0x02, 0xbe, 0x85, 0x8f, 0xe1, 0xfb, 0xf8,
+	0x28, 0xa6, 0xd3, 0x56, 0x66, 0x0b, 0x5c, 0x7e, 0xdf, 0x7c, 0x67, 0xce, 0xf9, 0xce, 0x0f, 0x5c,
+	0xd3, 0xc8, 0xe7, 0xe1, 0xb7, 0x5d, 0x2a, 0x7c, 0xf1, 0x98, 0xa6, 0x5b, 0x6a, 0x27, 0x1c, 0x05,
+	0x12, 0x3d, 0x09, 0x2c, 0x01, 0xd7, 0x2b, 0xc6, 0xb7, 0x21, 0x65, 0x0e, 0x52, 0x5f, 0x84, 0x18,
+	0x7b, 0xec, 0xe7, 0x23, 0x4b, 0x05, 0x19, 0x40, 0x27, 0xcd, 0x5f, 0x16, 0xfe, 0x03, 0x33, 0xb4,
+	0x81, 0x36, 0x6c, 0x7b, 0x2a, 0x45, 0x5e, 0x02, 0x14, 0x70, 0xed, 0x7f, 0x37, 0x74, 0x29, 0x50,
+	0x18, 0x62, 0x40, 0x6b, 0xc3, 0xfc, 0x48, 0x6c, 0x76, 0x46, 0x7d, 0xa0, 0x0d, 0xcf, 0xbd, 0x12,
+	0x5a, 0x7f, 0x34, 0xb8, 0x3a, 0x48, 0x9b, 0x44, 0x3b, 0xf2, 0x09, 0xda, 0x51, 0x41, 0xa4, 0x86,
+	0x36, 0xa8, 0x0f, 0x3b, 0xa3, 0xa1, 0x9d, 0x04, 0xf6, 0x31, 0xf1, 0x01, 0xb9, 0x0f, 0x35, 0xef,
+	0xa0, 0x57, 0x79, 0x55, 0xfc, 0x7c, 0xc6, 0x54, 0x54, 0xfc, 0x64, 0x94, 0xa2, 0x70, 0x91, 0x0b,
+	0x69, 0xa8, 0xee, 0xa9, 0x94, 0xf5, 0x16, 0x2e, 0x32, 0xe5, 0x4a, 0x36, 0xb2, 0x6c, 0x94, 0x01,
+	0xad, 0x1f, 0x18, 0x28, 0x4d, 0x2a, 0xa1, 0xf5, 0x57, 0x87, 0x9e, 0xaa, 0xcf, 0x1c, 0xda, 0xd0,
+	0xdc, 0x60, 0x2a, 0x4a, 0x77, 0x46, 0xe6, 0xae, 0xa2, 0x91, 0xd8, 0xcb, 0x65, 0xe4, 0x0a, 0x9a,
+	0x8c, 0x73, 0xe4, 0x45, 0x7f, 0x73, 0x60, 0xfe, 0xd2, 0xa1, 0x21, 0x6b, 0x36, 0xe1, 0x3c, 0xd3,
+	0xc5, 0xfb, 0xec, 0xff, 0x31, 0xf9, 0x00, 0x67, 0xf9, 0xc8, 0x65, 0x6c, 0x77, 0xf4, 0xea, 0x54,
+	0x2e, 0x95, 0x2c, 0x42, 0xc8, 0x1b, 0xb8, 0xa0, 0x88, 0xfc, 0x3e, 0x8c, 0x7d, 0x81, 0xdc, 0x61,
+	0xfe, 0x3d, 0xe3, 0xc5, 0x18, 0x0f, 0x1f, 0xc8, 0x6b, 0xe8, 0x72, 0x46, 0x59, 0xb8, 0x65, 0xa5,
+	0xb4, 0x21, 0xa5, 0x15, 0xd6, 0x5a, 0x02, 0xec, 0x73, 0x91, 0x0e, 0xb4, 0x56, 0xeb, 0xa5, 0xeb,
+	0xce, 0xa6, 0xfd, 0x5a, 0x06, 0xdc, 0xd9, 0x62, 0x7a, 0xbb, 0x98, 0xf7, 0x35, 0xd2, 0x86, 0xe6,
+	0x97, 0xdb, 0xaf, 0xb3, 0x69, 0x5f, 0xcf, 0x45, 0x63, 0x6f, 0x3d, 0x9b, 0xf6, 0xeb, 0xa4, 0x07,
+	0x9d, 0xbb, 0xc5, 0xd8, 0x71, 0x96, 0x93, 0x71, 0x46, 0x34, 0x46, 0xbf, 0x35, 0xe8, 0x4e, 0xf2,
+	0xf5, 0x9e, 0x60, 0x2c, 0x38, 0x46, 0xe4, 0x23, 0x3c, 0x9b, 0x33, 0xa1, 0xa4, 0x79, 0x5e, 0xf5,
+	0x2d, 0xe7, 0x66, 0x5e, 0x1e, 0x69, 0x87, 0x55, 0x23, 0x0e, 0x90, 0x39, 0x13, 0xd5, 0xed, 0x31,
+	0x8f, 0x6e, 0x61, 0xfe, 0x91, 0x71, 0x6a, 0x43, 0xad, 0xda, 0xcd, 0x7b, 0x78, 0x41, 0xf1, 0xc1,
+	0xa6, 0x11, 0x43, 0xbb, 0x38, 0x43, 0x9b, 0xe6, 0x85, 0xda, 0x49, 0x70, 0x73, 0xf9, 0xb4, 0x76,
+	0x37, 0xbb, 0x4b, 0x57, 0x0b, 0xce, 0xe4, 0x81, 0xbe, 0xfb, 0x17, 0x00, 0x00, 0xff, 0xff, 0x2c,
+	0xcf, 0x87, 0xad, 0xba, 0x03, 0x00, 0x00,
 }

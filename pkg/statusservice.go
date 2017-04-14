@@ -1,4 +1,4 @@
-package clarifystatussvc
+package clarifycontrol
 
 import (
 	"context"
@@ -35,7 +35,7 @@ type HostStatus struct {
 }
 
 // Service is an interface that provides the GetAllHostsStatus method.
-type Service interface {
+type StatusService interface {
 	// GetAllHostStatus returns a pointer to a collection of HostStatus.
 	GetHostStatus(ctx context.Context, jobName *string) ([]*HostStatus, error)
 }
@@ -46,7 +46,7 @@ type statusService struct {
 }
 
 // NewClarifyStatusService returns a new instance of the service.
-func NewClarifyStatusService(nomad lb.Balancer, logger log.Logger) Service {
+func NewClarifyStatusService(nomad lb.Balancer, logger log.Logger) StatusService {
 	return &statusService{Nomad: nomad, Logger: logger}
 }
 

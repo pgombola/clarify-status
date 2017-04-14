@@ -83,17 +83,21 @@ func main() {
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
 	// Business domain.
-	var service clarifystatussvc.Service
+	var statusService clarifycontrol.StatusService
+	var discoveryService clarifycontrol.DiscoveryService
 	{
-		service = clarifystatussvc.NewClarifyStatusService(balancer, logger)
+		statusService = clarifycontrol.NewClarifyStatusService(balancer, logger)
+		discoveryService = clarifycontrol.NewDiscoveryService(client, logger)
 	}
 
 	// Endpoint domain.
 	var statusEp endpoint.Endpoint
+	var discoveryEp endpoint.Endpoint
 	{
-		statusEp = clarifystatussvc.MakeGetHostStatusEndpoint(service)
+		statusEp = clarifycontrol.MakeGetHostStatusEndpoint(statusService)
+		discoveryEp = clarifycontrol.MakeServiceDiscoveryEndpoint(discoveryService)
 	}
-	endpoints := clarifystatussvc.Endpoints{StatusEndpoint: statusEp}
+	endpoints := clarifycontrol.Endpoints{StatusEndpoint: statusEp, ServiceDiscoveryEndpoint: discoveryEp}
 
 	startHealth(errc, logger, svc)
 	startGRPC(errc, logger, svc, endpoints)
