@@ -27,9 +27,9 @@ import (
 
 func main() {
 	var (
-		grpcAddr    = flag.String("grpc.addr", ":8081", "gRPC (HTTP/2) listen address")
-		httpAddr    = flag.String("http.addr", ":8082", "HTTP listen address (/health)")
-		consulAddr  = flag.String("consul.addr", "localhost:8500", "Address of consul agent")
+		grpcAddr    = flag.String("grpc.addr", "172.16.4.26:8081", "gRPC (HTTP/2) listen address")
+		httpAddr    = flag.String("http.addr", "172.16.4.26:8082", "HTTP listen address (/health)")
+		consulAddr  = flag.String("consul.addr", "10.10.20.31:8500", "Address of consul agent")
 		instance    = flag.Int("instance", 0, "The instance count of the status service")
 		serviceName = flag.String("service.name", "clarify-control", "Name of the service")
 	)
@@ -38,7 +38,7 @@ func main() {
 	// Logging domain.
 	var logger log.Logger
 	{
-		logger = log.NewLogfmtLogger(os.Stdout)
+		logger = log.NewJSONLogger(log.NewSyncWriter(os.Stdout))
 		logger = log.With(logger, "ts", log.DefaultTimestampUTC)
 		logger = log.With(logger, "caller", log.DefaultCaller)
 	}
@@ -51,28 +51,27 @@ func main() {
 
 	// Registry domain.
 	var (
-		client consulsd.Client
-		reg    *api.AgentServiceRegistration
+		kitconsul consulsd.Client
+		consul    *api.Client
+		reg       *api.AgentServiceRegistration
 	)
 	{
 		var err error
-		client, err = createConsulClient(consulAddr, logger)
+		consul, kitconsul, err = createConsulClient(consulAddr, logger)
 		if err != nil {
 			logger.Log("err", err)
 		}
-		reg, err = registerService(client, svc)
+		reg, err = registerService(kitconsul, svc)
 		if err != nil {
 			logger.Log("err", err)
 		}
 	}
 
 	// Discovery domain.
-	var (
-		balancer lb.Balancer
-	)
+	var nomadlb lb.Balancer
 	{
-		nomadSubscriber := consulsd.NewSubscriber(client, nomadAddressFactory, logger, "nomad", []string{"http"}, true)
-		balancer = lb.NewRoundRobin(nomadSubscriber)
+		nomadSubscriber := consulsd.NewSubscriber(kitconsul, nomadAddressFactory, logger, "nomad", []string{"http"}, true)
+		nomadlb = lb.NewRoundRobin(nomadSubscriber)
 	}
 
 	// Mechanical domain.
@@ -80,24 +79,13 @@ func main() {
 	errc := make(chan error)
 	// Signal handling channel. This allows for registry cleanup when we receive SIGTERM, SIGINT.
 	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL)
 
 	// Business domain.
-	var statusService clarifycontrol.StatusService
-	var discoveryService clarifycontrol.DiscoveryService
-	{
-		statusService = clarifycontrol.NewClarifyStatusService(balancer, logger)
-		discoveryService = clarifycontrol.NewDiscoveryService(client, logger)
-	}
+	control := clarifycontrol.NewClarifyControlService(nomadlb, consul, logger)
 
 	// Endpoint domain.
-	var statusEp endpoint.Endpoint
-	var discoveryEp endpoint.Endpoint
-	{
-		statusEp = clarifycontrol.MakeGetHostStatusEndpoint(statusService)
-		discoveryEp = clarifycontrol.MakeServiceDiscoveryEndpoint(discoveryService)
-	}
-	endpoints := clarifycontrol.Endpoints{StatusEndpoint: statusEp, ServiceDiscoveryEndpoint: discoveryEp}
+	endpoints := clarifycontrol.MakeServerEndpoints(control)
 
 	startHealth(errc, logger, svc)
 	startGRPC(errc, logger, svc, endpoints)
@@ -106,11 +94,11 @@ func main() {
 		select {
 		case err := <-errc:
 			if err != nil {
-				logger.Log(err)
+				logger.Log("err", err)
 			}
 		case s := <-sigs:
-			logger.Log("error", fmt.Sprintf("Captured %v. Exiting...", s))
-			client.Deregister(reg)
+			logger.Log("exit_signal", s)
+			kitconsul.Deregister(reg)
 			os.Exit(0)
 		}
 	}
@@ -123,13 +111,13 @@ type service struct {
 	Name        *string
 }
 
-func createConsulClient(consulAddr *string, logger log.Logger) (consulsd.Client, error) {
+func createConsulClient(consulAddr *string, logger log.Logger) (*api.Client, consulsd.Client, error) {
 	consulConfig := api.DefaultConfig()
 	if len(*consulAddr) > 0 {
 		consulConfig.Address = *consulAddr
 	}
 	consulClient, err := api.NewClient(consulConfig)
-	return consulsd.NewClient(consulClient), err
+	return consulClient, consulsd.NewClient(consulClient), err
 }
 
 func registerService(client consulsd.Client, svc *service) (*api.AgentServiceRegistration, error) {
@@ -169,25 +157,25 @@ func startHealth(errc chan error, logger log.Logger, svc *service) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(health.String()))
 	})
-	logger.Log("info", fmt.Sprintf("Starting /health at %v", *svc.HTTPAddress))
+	logger.Log("http_started", *svc.HTTPAddress)
 	go func() {
 		errc <- http.ListenAndServe(*svc.HTTPAddress, nil)
 	}()
 }
 
-func startGRPC(errc chan error, logger log.Logger, svc *service, endpoints clarifystatussvc.Endpoints) {
+func startGRPC(errc chan error, logger log.Logger, svc *service, endpoints clarifycontrol.Endpoints) {
 	go func() {
-		logger.Log("info", fmt.Sprintf("Starting gRPC at %v", *svc.GRPCAddress))
+		logger.Log("grpc_started", *svc.GRPCAddress)
 		ln, err := net.Listen("tcp", *svc.GRPCAddress)
 		if err != nil {
 			errc <- err
 			return
 		}
-		srv := clarifystatussvc.MakeGRPCServer(endpoints, nil, nil)
+		srv := clarifycontrol.MakeGRPCServer(endpoints, nil, logger)
 		healthSrv := health.NewServer()
 		s := grpc.NewServer()
 		grpc_health_v1.RegisterHealthServer(s, healthSrv)
-		pb.RegisterClarifyStatusServer(s, srv)
+		pb.RegisterClarifyControlServer(s, srv)
 		healthSrv.SetServingStatus(*svc.Name, grpc_health_v1.HealthCheckResponse_SERVING)
 		errc <- s.Serve(ln)
 	}()
