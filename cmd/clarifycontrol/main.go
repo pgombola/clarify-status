@@ -27,9 +27,9 @@ import (
 
 func main() {
 	var (
-		grpcAddr    = flag.String("grpc.addr", "172.16.4.26:8081", "gRPC (HTTP/2) listen address")
-		httpAddr    = flag.String("http.addr", "172.16.4.26:8082", "HTTP listen address (/health)")
-		consulAddr  = flag.String("consul.addr", "10.10.20.31:8500", "Address of consul agent")
+		grpcAddr    = flag.String("grpc.addr", ":8081", "gRPC (HTTP/2) listen address")
+		httpAddr    = flag.String("http.addr", ":8082", "HTTP listen address (/health)")
+		consulAddr  = flag.String("consul.addr", ":8500", "Address of consul agent")
 		instance    = flag.Int("instance", 0, "The instance count of the status service")
 		serviceName = flag.String("service.name", "clarify-control", "Name of the service")
 	)
