@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/http"
 	"strconv"
 
 	kitlog "github.com/go-kit/kit/log"
@@ -93,7 +94,18 @@ func (s *controlService) DiscoverService(ctx context.Context, serviceName, servi
 }
 
 func (s *controlService) DrainNode(ctx context.Context, hostname *string) (bool, error) {
-	// nomad := s.getNomadServer()
+	nomad := s.getNomadServer()
+	host, err := client.HostID(nomad, hostname)
+	if err != nil {
+		return false, err
+	}
+	status, err := client.Drain(nomad, host.ID, true)
+	if err != nil {
+		return false, err
+	}
+	if status == http.StatusOK {
+		return true, nil
+	}
 	return false, nil
 }
 

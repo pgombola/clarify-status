@@ -138,9 +138,8 @@ func EncodeGRPCDrainResponse(_ context.Context, resp interface{}) (interface{}, 
 	node := &pb.Node{Hostname: *hostname}
 	if drained {
 		return &pb.DrainReply{Node: node, Status: pb.ClarifyStatus_NODE_DRAINED}, nil
-	} else {
-		return &pb.DrainReply{Node: node, Status: pb.ClarifyStatus_UNKNOWN}, nil
 	}
+	return &pb.DrainReply{Node: node, Status: pb.ClarifyStatus_UNKNOWN}, nil
 }
 
 func (s *grpcServer) Stop(ctx oldcontext.Context, req *pb.Job) (*pb.StopReply, error) {
