@@ -110,6 +110,15 @@ func (s *controlService) DrainNode(ctx context.Context, hostname *string) (bool,
 }
 
 func (s *controlService) StopJob(ctx context.Context, jobName *string) (bool, error) {
+	nomad := s.getNomadServer()
+	job := &client.Job{Name: *jobName}
+	status, err := client.StopJob(nomad, job)
+	if err != nil {
+		return false, err
+	}
+	if status == http.StatusOK {
+		return true, nil
+	}
 	return false, nil
 }
 
