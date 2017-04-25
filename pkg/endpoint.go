@@ -99,9 +99,9 @@ func MakeStopEndpoint(control ControlService) endpoint.Endpoint {
 		req := request.(*stopRequest)
 		stopped, err := control.StopJob(ctx, req.JobName)
 		if err != nil {
-			return stopResponse{}, nil
+			return stopResponse{}, err
 		}
-		return stopResponse{Stopped: stopped}, nil
+		return stopResponse{Stopped: stopped, JobName: req.JobName}, nil
 	}
 }
 
