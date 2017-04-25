@@ -67,21 +67,23 @@ func MakeDiscoverServiceEndpoint(control ControlService) endpoint.Endpoint {
 
 type drainRequest struct {
 	Hostname *string
+	Enabled  bool
 }
 
 type drainResponse struct {
 	Hostname *string
 	Drained  bool
+	Enabled  bool
 }
 
 func MakeDrainEndpoint(control ControlService) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (interface{}, error) {
 		req := request.(*drainRequest)
-		drained, err := control.DrainNode(ctx, req.Hostname)
+		drained, err := control.DrainNode(ctx, req.Hostname, req.Enabled)
 		if err != nil {
 			return drainResponse{}, err
 		}
-		return drainResponse{Drained: drained, Hostname: req.Hostname}, nil
+		return drainResponse{Drained: drained, Enabled: req.Enabled, Hostname: req.Hostname}, nil
 	}
 }
 

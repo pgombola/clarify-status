@@ -119,7 +119,7 @@ func EncodeGRPCDiscoverServiceResponse(_ context.Context, response interface{}) 
 	return &pb.ServiceLocationReply{Locations: replyLocations}, nil
 }
 
-func (s *grpcServer) Drain(ctx oldcontext.Context, req *pb.Node) (*pb.DrainReply, error) {
+func (s *grpcServer) Drain(ctx oldcontext.Context, req *pb.DrainRequest) (*pb.DrainReply, error) {
 	_, rep, err := s.drain.ServeGRPC(ctx, req)
 	if err != nil {
 		return nil, err
@@ -128,16 +128,18 @@ func (s *grpcServer) Drain(ctx oldcontext.Context, req *pb.Node) (*pb.DrainReply
 }
 
 func DecodeGRPCDrainRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
-	node := grpcReq.(*pb.Node)
-	return &drainRequest{&node.Hostname}, nil
+	drainreq := grpcReq.(*pb.DrainRequest)
+	return &drainRequest{&drainreq.Node.Hostname, drainreq.Enabled}, nil
 }
 
 func EncodeGRPCDrainResponse(_ context.Context, resp interface{}) (interface{}, error) {
-	hostname := resp.(drainResponse).Hostname
-	drained := resp.(drainResponse).Drained
+	dr := resp.(drainResponse)
+	hostname := dr.Hostname
 	node := &pb.Node{Hostname: *hostname}
-	if drained {
+	if dr.Drained && dr.Enabled {
 		return &pb.DrainReply{Node: node, Status: pb.ClarifyStatus_NODE_DRAINED}, nil
+	} else if dr.Drained && !dr.Enabled {
+		return &pb.DrainReply{Node: node, Status: pb.ClarifyStatus_NODE_UNALLOCATED}, nil
 	}
 	return &pb.DrainReply{Node: node, Status: pb.ClarifyStatus_UNKNOWN}, nil
 }

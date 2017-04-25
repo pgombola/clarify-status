@@ -34,7 +34,7 @@ const StatusUnallocated = 4
 type ControlService interface {
 	NodeStatus(ctx context.Context, jobName *string) ([]*NodeDetails, error)
 	DiscoverService(ctx context.Context, serviceName, serviceTag *string, healthy bool) ([]*ServiceLocation, error)
-	DrainNode(ctx context.Context, hostname *string) (bool, error)
+	DrainNode(ctx context.Context, hostname *string, enabled bool) (bool, error)
 	StopJob(ctx context.Context, jobName *string) (bool, error)
 	Leader(ctx context.Context, serviceName *string) (*ServiceLocation, error)
 }
@@ -93,13 +93,13 @@ func (s *controlService) DiscoverService(ctx context.Context, serviceName, servi
 	return locations, nil
 }
 
-func (s *controlService) DrainNode(ctx context.Context, hostname *string) (bool, error) {
+func (s *controlService) DrainNode(ctx context.Context, hostname *string, enabled bool) (bool, error) {
 	nomad := s.getNomadServer()
 	host, err := client.HostID(nomad, hostname)
 	if err != nil {
 		return false, err
 	}
-	status, err := client.Drain(nomad, host.ID, true)
+	status, err := client.Drain(nomad, host.ID, enabled)
 	if err != nil {
 		return false, err
 	}

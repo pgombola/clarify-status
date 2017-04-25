@@ -99,7 +99,10 @@ func main() {
 		case s := <-sigs:
 			logger.Log("event", "exiting", "exit_signal", s)
 			grpcsrv.GracefulStop()
-			kitconsul.Deregister(reg)
+			err := kitconsul.Deregister(reg)
+			if err != nil {
+				logger.Log("event", "deregister_service", "error", err.Error())
+			}
 			os.Exit(0)
 		}
 	}
