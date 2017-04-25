@@ -88,7 +88,7 @@ func main() {
 	endpoints := clarifycontrol.MakeServerEndpoints(control)
 
 	startHealth(errc, logger, svc)
-	startGRPC(errc, logger, svc, endpoints)
+	grpcsrv := startGRPC(errc, logger, svc, endpoints)
 
 	for {
 		select {
@@ -97,7 +97,8 @@ func main() {
 				logger.Log("err", err)
 			}
 		case s := <-sigs:
-			logger.Log("exit_signal", s)
+			logger.Log("event", "exiting", "exit_signal", s)
+			grpcsrv.GracefulStop()
 			kitconsul.Deregister(reg)
 			os.Exit(0)
 		}
@@ -157,15 +158,16 @@ func startHealth(errc chan error, logger log.Logger, svc *service) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(health.String()))
 	})
-	logger.Log("http_started", *svc.HTTPAddress)
+	logger.Log("event", "http_starting", "address", *svc.HTTPAddress)
 	go func() {
 		errc <- http.ListenAndServe(*svc.HTTPAddress, nil)
 	}()
 }
 
-func startGRPC(errc chan error, logger log.Logger, svc *service, endpoints clarifycontrol.Endpoints) {
+func startGRPC(errc chan error, logger log.Logger, svc *service, endpoints clarifycontrol.Endpoints) *grpc.Server {
+	s := grpc.NewServer()
 	go func() {
-		logger.Log("grpc_started", *svc.GRPCAddress)
+		logger.Log("event", "grpc_starting", "address", *svc.GRPCAddress)
 		ln, err := net.Listen("tcp", *svc.GRPCAddress)
 		if err != nil {
 			errc <- err
@@ -173,12 +175,12 @@ func startGRPC(errc chan error, logger log.Logger, svc *service, endpoints clari
 		}
 		srv := clarifycontrol.MakeGRPCServer(endpoints, nil, logger)
 		healthSrv := health.NewServer()
-		s := grpc.NewServer()
 		grpc_health_v1.RegisterHealthServer(s, healthSrv)
 		pb.RegisterClarifyControlServer(s, srv)
 		healthSrv.SetServingStatus(*svc.Name, grpc_health_v1.HealthCheckResponse_SERVING)
 		errc <- s.Serve(ln)
 	}()
+	return s
 }
 
 func nomadAddressFactory(instance string) (endpoint.Endpoint, io.Closer, error) {
