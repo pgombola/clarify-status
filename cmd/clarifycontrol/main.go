@@ -43,7 +43,8 @@ func main() {
 		logger = log.With(logger, "caller", log.DefaultCaller)
 	}
 
-	svc := &service{
+	// Service.
+	controlSvc := &service{
 		HTTPAddress: httpAddr,
 		GRPCAddress: grpcAddr,
 		Name:        serviceName,
@@ -61,7 +62,7 @@ func main() {
 		if err != nil {
 			logger.Log("err", err)
 		}
-		reg, err = registerService(kitconsul, svc)
+		reg, err = registerService(kitconsul, controlSvc)
 		if err != nil {
 			logger.Log("err", err)
 		}
@@ -87,8 +88,8 @@ func main() {
 	// Endpoint domain.
 	endpoints := clarifycontrol.MakeServerEndpoints(control)
 
-	startHealth(errc, logger, svc)
-	grpcsrv := startGRPC(errc, logger, svc, endpoints)
+	startHealth(errc, logger, controlSvc)
+	grpcsrv := startGRPC(errc, logger, controlSvc, endpoints)
 
 	for {
 		select {
@@ -98,11 +99,11 @@ func main() {
 			}
 		case s := <-sigs:
 			logger.Log("event", "exiting", "exit_signal", s)
-			grpcsrv.GracefulStop()
 			err := kitconsul.Deregister(reg)
 			if err != nil {
 				logger.Log("event", "deregister_service", "error", err.Error())
 			}
+			grpcsrv.GracefulStop()
 			os.Exit(0)
 		}
 	}
